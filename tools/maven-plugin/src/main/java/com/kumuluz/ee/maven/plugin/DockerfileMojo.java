@@ -29,7 +29,7 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 @Mojo(
         name = "generate-dockerfile",
         defaultPhase = LifecyclePhase.PACKAGE,
-        requiresDependencyResolution = ResolutionScope.TEST
+        requiresDependencyResolution = ResolutionScope.COMPILE
 )
 public class DockerfileMojo extends AbstractDockerfileMojo {
 

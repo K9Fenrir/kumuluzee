@@ -79,6 +79,6 @@ Include the plugin in your project:
 
     * __port__
 
-        The port the application listens on.
+        The port the application listens on. If not specified here, will check config.yaml. If neither are present, will take default.
 
         __Default value is__: '8080'

@@ -70,7 +70,7 @@ public abstract class AbstractDockerfileMojo extends AbstractMojo {
     @Parameter( defaultValue = "${reactorProjects}", readonly = true, required = true )
     private List<MavenProject> reactorProjects;
 
-    private static final String DOCKERFILE_SMART_TEMPLATE = "dockerfile-generation/dockerfileSmart.mustache";
+    private static final String DOCKERFILE_LAYERED_TEMPLATE = "dockerfile-generation/dockerfileLayered.mustache";
     private static final String DOCKERFILE_EXPLODED_TEMPLATE = "dockerfile-generation/dockerfileExploded.mustache";
     private static final String DOCKERFILE_UBER_TEMPLATE = "dockerfile-generation/dockerfileUber.mustache";
     private static final String DOCKERIGNORE_TEMPLATE = "dockerfile-generation/dockerignore.mustache";
@@ -91,7 +91,7 @@ public abstract class AbstractDockerfileMojo extends AbstractMojo {
         if (packagingType.equals("uber")) {
             dockerfileTemplate = DOCKERFILE_UBER_TEMPLATE;
         } else if (packagingType.equals("layered")) {
-            dockerfileTemplate = DOCKERFILE_SMART_TEMPLATE;
+            dockerfileTemplate = DOCKERFILE_LAYERED_TEMPLATE;
             executableName = executableName.replace(".jar", "-layered.jar");
         } else if (packagingType.equals("exploded")) {
             String OS = System.getProperty("os.name").toLowerCase();
@@ -106,7 +106,6 @@ public abstract class AbstractDockerfileMojo extends AbstractMojo {
             return;
         }
 
-        List<String> modules = project.getModules();
         HashSet<String> appModulesSet = Sets.newHashSet(appModules);
         LinkedList<String> moduleFileNames = new LinkedList<>();
 
@@ -122,42 +121,31 @@ public abstract class AbstractDockerfileMojo extends AbstractMojo {
         kumuluzProject.setExecutableName(executableName);
         kumuluzProject.setBaseImage(baseImage);
 
-        // Single-module project
-        if (project.getParent() == null && modules.size() == 0) {
-            kumuluzProject.setName(project.getName());
-            kumuluzProject.setDescription(project.getDescription());
+        if (packagingType.equals("layered")) {
+            for (MavenProject p : reactorProjects) {
+                if (p.getPackaging().equals("jar") && !p.getArtifactId().equals(project.getArtifactId())) {
+                    String moduleExecutableName = String.format("%s-%s.jar", p.getArtifactId(), p.getVersion());
+                    moduleFileNames.add(moduleExecutableName);
 
-//            MustacheWriter.writeFileFromTemplate(dockerfileTemplate, "Dockerfile", kumuluzProject, outputDirectory);
-        }
+                    if (appModulesSet.contains(p.getArtifactId())) {
+                        KumuluzProject kumuluzModule = kumuluzProject.newAppModule(p.getArtifactId());
+                        kumuluzModule.setExecutableName(moduleExecutableName);
+                    } else {
+                        KumuluzProject kumuluzModule = kumuluzProject.newModule(p.getArtifactId());
+                        kumuluzModule.setExecutableName(moduleExecutableName);
+                    }
 
-        for (MavenProject p : reactorProjects){
-            if (p.getPackaging().equals("jar") && !p.getArtifactId().equals(project.getArtifactId())){
-                String moduleExecutableName = String.format("%s-%s.jar", p.getArtifactId(), p.getVersion());
-                moduleFileNames.add(moduleExecutableName);
-
-                if (appModulesSet.contains(p.getArtifactId())){
-                    KumuluzProject kumuluzModule = kumuluzProject.newAppModule(p.getArtifactId());
-                    kumuluzModule.setExecutableName(moduleExecutableName);
-                }
-                else {
-                    KumuluzProject kumuluzModule = kumuluzProject.newModule(p.getArtifactId());
-                    kumuluzModule.setExecutableName(moduleExecutableName);
                 }
 
             }
-
-        }
-
-        if (packagingType.equals("layered")){
-            copySmartModules(moduleFileNames);
+            copyLayeredModules(moduleFileNames);
+            MustacheWriter.writeFileFromTemplate(DOCKERIGNORE_TEMPLATE, ".dockerignore", kumuluzProject, outputDirectory);
         }
 
         kumuluzProject.setName(project.getName());
         kumuluzProject.setDescription(project.getDescription());
 
         MustacheWriter.writeFileFromTemplate(dockerfileTemplate, "Dockerfile", kumuluzProject, outputDirectory);
-        MustacheWriter.writeFileFromTemplate(DOCKERIGNORE_TEMPLATE, ".dockerignore", kumuluzProject, outputDirectory);
-
     }
 
     /**
@@ -204,7 +192,7 @@ public abstract class AbstractDockerfileMojo extends AbstractMojo {
      *
      * @param moduleFileNames names of files to copy
      */
-    private void copySmartModules(List<String> moduleFileNames){
+    private void copyLayeredModules(List<String> moduleFileNames){
 
         File modulesDir = new File(outputDirectory.getAbsolutePath() + "/modules");
 
