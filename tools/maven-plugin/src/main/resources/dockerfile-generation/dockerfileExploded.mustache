@@ -1,0 +1,12 @@
+FROM {{baseImage}}
+LABEL{{#name}} name="{{name}}"{{/name}}{{#description}} description="{{description}}"{{/description}}
+
+COPY dependency /opt/dependency
+COPY classes /opt/classes
+{{#windowsOS}}
+ENTRYPOINT ["java", "-cp", "/opt/classes;/opt/dependency/*", "com.kumuluz.ee.EeApplication"]
+{{/windowsOS}}
+{{^windowsOS}}
+ENTRYPOINT ["java", "-cp", "/opt/classes:/opt/dependency/*", "com.kumuluz.ee.EeApplication"]
+{{/windowsOS}}
+EXPOSE {{port}}

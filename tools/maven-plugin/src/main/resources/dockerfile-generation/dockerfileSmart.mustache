@@ -1,0 +1,16 @@
+FROM {{baseImage}}
+LABEL{{#name}} name="{{name}}"{{/name}}{{#description}} description="{{description}}"{{/description}}
+
+COPY lib /opt/lib
+
+{{#modules}}
+COPY modules/{{executableName}} /opt/lib
+{{/modules}}
+{{#appModules}}
+COPY modules/{{executableName}} /opt/lib
+{{/appModules}}
+
+COPY {{executableName}} /opt
+
+ENTRYPOINT ["java", "-jar", "/opt/{{executableName}}"]
+EXPOSE {{port}}

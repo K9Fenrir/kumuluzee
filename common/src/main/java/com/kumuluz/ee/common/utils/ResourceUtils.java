@@ -30,6 +30,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.jar.Manifest;
 
 /**
  * @author Tilen Faganel
@@ -105,6 +106,33 @@ public class ResourceUtils {
 
         return (jar == null || jar.toString().toLowerCase().startsWith("jar:"))
                 && ResourceUtils.class.getClassLoader().getClass().getName().equals("com.kumuluz.ee.loader.EeClassLoader");
+    }
+
+    public static PackagingType getPackagingType(){
+
+        try {
+            URL manifestURL = ResourceUtils.class.getClassLoader().getResource("META-INF/MANIFEST.MF");
+
+            if (manifestURL != null){
+
+                Manifest manifest = new Manifest(manifestURL.openStream());
+
+                String packagingType = manifest.getMainAttributes().getValue("packagingType");
+
+                if (packagingType != null){
+                    return PackagingType.getTypeFromString(packagingType);
+                }
+
+            }
+            else{
+                return PackagingType.EXPLODED;
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     public static boolean isRunningTests() {

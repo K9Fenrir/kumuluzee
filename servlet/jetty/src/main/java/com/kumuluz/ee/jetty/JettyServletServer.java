@@ -30,6 +30,7 @@ import com.kumuluz.ee.common.dependencies.EeComponentType;
 import com.kumuluz.ee.common.dependencies.ServerDef;
 import com.kumuluz.ee.common.exceptions.KumuluzServerException;
 import com.kumuluz.ee.common.servlet.ServletWrapper;
+import com.kumuluz.ee.common.utils.PackagingType;
 import com.kumuluz.ee.common.utils.ResourceUtils;
 import org.eclipse.jetty.plus.jndi.Resource;
 import org.eclipse.jetty.plus.jndi.Transaction;
@@ -126,7 +127,12 @@ public class JettyServletServer implements ServletServer {
 
         appContext = new WebAppContext();
 
-        if (ResourceUtils.isRunningInJar()) {
+        PackagingType packagingType = ResourceUtils.getPackagingType();
+
+        if (packagingType == null){
+            throw new IllegalStateException("Unable to determine packaging type");
+        }
+        else if (packagingType.equals(PackagingType.UBER)) {
             appContext.setAttribute(JettyAttributes.jarPattern, ClasspathAttributes.jar);
 
             appContext.setExtraClasspath(JettyJarClasspathUtil.getExtraClasspath(scanLibraries));
@@ -136,7 +142,11 @@ public class JettyServletServer implements ServletServer {
             } catch (Exception e) {
                 throw new IllegalStateException("Unable to set custom classloader for Jetty", e);
             }
-        } else {
+        }
+        else if (packagingType.equals(PackagingType.LAYERED)) {
+            appContext.setAttribute(JettyAttributes.jarPattern, ClasspathAttributes.jar);
+        }
+        else {
             StringBuilder explodedClasspath = new StringBuilder(ClasspathAttributes.exploded);
 
             if (ResourceUtils.isRunningTests()) {

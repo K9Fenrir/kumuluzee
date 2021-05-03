@@ -47,8 +47,15 @@ public abstract class AbstractPackageMojo extends AbstractCopyDependenciesMojo {
     private static final String TEMP_DIR_NAME_PREFIX = "kumuluzee-loader";
     private static final String CLASS_SUFFIX = ".class";
 
+    private static final String PACKAGING_TYPE_UBER = "uber";
+    private static final String PACKAGING_TYPE_LAYERED = "layered";
+    private static final String PACKAGING_TYPE_EXPLODED = "exploded";
+
     @Parameter(defaultValue = "com.kumuluz.ee.EeApplication")
     private String mainClass;
+
+    @Parameter(defaultValue = PACKAGING_TYPE_UBER, property = "packagingType")
+    private String packagingType;
 
     private String buildDirectory;
     private String outputDirectory;
@@ -59,11 +66,25 @@ public abstract class AbstractPackageMojo extends AbstractCopyDependenciesMojo {
         outputDirectory = project.getBuild().getOutputDirectory();
         finalName = project.getBuild().getFinalName();
 
+        packagingType = packagingType.trim().toLowerCase();
+
         checkPrecoditions();
-        copyDependencies("classes/lib");
-        unpackDependencies();
-        packageJar();
-        renameJars();
+        if (packagingType.equals(PACKAGING_TYPE_UBER)) {
+            copyDependencies("classes/lib");
+            unpackDependencies();
+            packageJar();
+            renameJars();
+        }
+        else if (packagingType.equals(PACKAGING_TYPE_LAYERED)){
+            copyDependencies("lib");
+            packageLayeredJar();
+        }
+        else if (packagingType.equals(PACKAGING_TYPE_EXPLODED)){
+            copyDependencies();
+        }
+        else {
+            getLog().warn("Unknown packaging type. Skipping KumuluzEE packaging.");
+        }
     }
 
     private void checkPrecoditions() throws MojoExecutionException {
@@ -170,6 +191,37 @@ public abstract class AbstractPackageMojo extends AbstractCopyDependenciesMojo {
                         element("archive",
                                 element("manifest",
                                         element("mainClass", "com.kumuluz.ee.loader.EeBootLoader")
+                                ),
+                                element("manifestEntries",
+                                        element("packagingType", packagingType)
+                                )
+                        )
+                ),
+                executionEnvironment(project, session, buildPluginManager)
+        );
+    }
+
+    private void packageLayeredJar() throws MojoExecutionException {
+        executeMojo(
+                plugin(
+                        groupId("org.apache.maven.plugins"),
+                        artifactId("maven-jar-plugin"),
+                        version(MojoConstants.MAVEN_JAR_PLUGIN_VERSION)
+                ),
+                goal("jar"),
+                configuration(
+                        element("finalName", finalName),
+                        element("outputDirectory", buildDirectory),
+                        element("classifier", "layered"),
+                        element("forceCreation", "true"),
+                        element("archive",
+                                element("manifest",
+                                        element("addClasspath", "true"),
+                                        element("classpathPrefix", "lib/"),
+                                        element("mainClass", "com.kumuluz.ee.EeApplication")
+                                ),
+                                element("manifestEntries",
+                                        element("packagingType", packagingType)
                                 )
                         )
                 ),

@@ -29,6 +29,7 @@ import com.kumuluz.ee.common.runtime.EeRuntime;
 import com.kumuluz.ee.common.runtime.EeRuntimeComponent;
 import com.kumuluz.ee.common.runtime.EeRuntimeExtension;
 import com.kumuluz.ee.common.runtime.EeRuntimeInternal;
+import com.kumuluz.ee.common.utils.PackagingType;
 import com.kumuluz.ee.common.utils.ResourceUtils;
 import com.kumuluz.ee.common.wrapper.ComponentWrapper;
 import com.kumuluz.ee.common.wrapper.EeComponentWrapper;
@@ -604,12 +605,19 @@ public class EeApplication {
 
     private void checkRequirements() {
 
-        if (ResourceUtils.isRunningInJar()) {
+        PackagingType packagingType = ResourceUtils.getPackagingType();
 
-            log.info("KumuluzEE running inside a JAR runtime.");
-        } else {
-
-            log.info("KumuluzEE running in an exploded class and dependency runtime.");
+        if (packagingType == null){
+            throw new IllegalStateException("Unable to determine packaging type");
+        }
+        else if (packagingType.equals(PackagingType.UBER)) {
+            log.info("KumuluzEE running inside an UBER JAR runtime.");
+        }
+        else if (packagingType.equals(PackagingType.LAYERED)){
+            log.info("KumuluzEE running inside a LAYERED JAR runtime");
+        }
+        else {
+            log.info("KumuluzEE running in an EXPLODED class and dependency runtime.");
         }
     }
 }

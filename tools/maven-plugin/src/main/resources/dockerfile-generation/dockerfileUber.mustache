@@ -1,0 +1,7 @@
+FROM {{baseImage}}
+LABEL{{#name}} name="{{name}}"{{/name}}{{#description}} description="{{description}}"{{/description}}
+
+COPY {{executableName}} /opt
+
+ENTRYPOINT ["java", "-jar", "/opt/{{executableName}}"]
+EXPOSE {{port}}
