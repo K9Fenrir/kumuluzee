@@ -116,6 +116,11 @@ public class ResourceUtils {
             if (manifestURL != null){
 
                 Manifest manifest = new Manifest(manifestURL.openStream());
+                
+                // Will be null if running inside IDE since the manifestURL will point to kumuluzee-core JAR
+                if (manifest.getMainAttributes().getValue("Main-Class") == null) {
+                    return PackagingType.EXPLODED;
+                }
 
                 String packagingType = manifest.getMainAttributes().getValue("packagingType");
 
